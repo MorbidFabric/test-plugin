@@ -1,11 +1,12 @@
 import sys
 import ctypes
 from ctypes import wintypes
-from PyQt6.QtWidgets import QMainWindow, QApplication, QStyle
+from PyQt6.QtWidgets import QMainWindow, QApplication, QStyle, QGraphicsDropShadowEffect
 from PyQt6.uic import loadUi
 from PyQt6.QtCore import QTimer, Qt, QPoint, QSize, QPropertyAnimation, QEasingCurve
 from PyQt6 import QtGui
 from time import strftime, localtime
+import uuid
 
 class ClockWindow(QMainWindow):
     def __init__(self):
@@ -13,8 +14,8 @@ class ClockWindow(QMainWindow):
         loadUi("clock.ui", self)
 
         self.setWindowTitle("E2E")
-        self.setWindowFlags(Qt.WindowType.FramelessWindowHint)
-        #self.setWindowFlags(Qt.WindowType.FramelessWindowHint | Qt.WindowType.WindowMinimizeButtonHint)
+        # self.setWindowFlags(Qt.WindowType.FramelessWindowHint)
+        #self.setWindowFlags(Qt.WindowType.Window | Qt.WindowType.WindowStaysOnTopHint)
         self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
         
         # Setup title bar buttons
@@ -31,6 +32,19 @@ class ClockWindow(QMainWindow):
         self.maximizeButton.setIcon(max_icon)
         self.minimizeButton.setIcon(min_icon)
         self.closeButton.setIcon(close_icon)
+
+        #add drop shadow to close button
+        #self.closeButton.setStyleSheet("QPushButton {border-radius: 10px; background-color: rgba(255, 0, 0, 0);}")
+        # Add drop shadow effect to close button
+        shadow = QGraphicsDropShadowEffect(self)
+        shadow.setBlurRadius(15)
+        shadow.setColor(QtGui.QColor(0, 0, 0, 80))  # Semi-transparent black
+        shadow.setOffset(2, 2)  # Slight offset to bottom-right
+        self.closeButton.setGraphicsEffect(shadow)
+        self.closeButton.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.closeButton.setToolTip("Close")
+        self.closeButton.setToolTipDuration(2000)
+
         #self.showMaximized
         '''
         QPushButton {
@@ -83,10 +97,12 @@ class ClockWindow(QMainWindow):
         return QtGui.QIcon(QtGui.QPixmap.fromImage(result))
      
     def maximize(self):
-        if self.isMaximized():
-            self.showNormal()
-        else:
-            self.showMaximized()
+        # if self.isMaximized():
+        #     self.showNormal()
+        # else:
+        #     self.showMaximized()
+        icon = self.get_icon_from_exe(r"E:\PyMeow\projects\Dishonored_DO.exe")
+        self.maximizeButton.setIcon(icon)
 
     def mousePressEvent(self, event):
         if self.childAt(event.position().toPoint()) == self.titleBar:
@@ -113,14 +129,62 @@ class ClockWindow(QMainWindow):
             super().mouseReleaseEvent(event)
     
     def mouseDoubleClickEvent(self, event):
-        self.maximize()
+        #self.maximize()
+        print("double click title bar")
+        pass
 
     def update_time(self):
         curr_time = strftime("%H:%M:%S", localtime())
         self.labelTime.setText(curr_time)
         #self.labelTime.setVisible(False)
 
+    def get_icon_from_exe(self, path):
+        model = QtGui.QFileSystemModel()
+        icon = model.fileIcon(model.index(path))
+        
+        print(icon.availableSizes())
+        pixmap = icon.pixmap(256, 256)
+        pixmap.save("icon.png")
+        return icon
+    
+    
+
+import ctypes
+from ctypes import wintypes
+
+# DWMWA_CAPTION_COLOR is 35 on supported systems.
+DWMWA_CAPTION_COLOR = 35
+
+def set_caption_color(window, color_value):
+    """
+    Set the caption (title bar) color of a native window.
+    
+    color_value is converted from HEX to COLORREF: 0x00BBGGRR.
+    For example, 0x000000FF for red or #FF0000 for red.
+    """
+    #convert color from HEX to BGR
+    if "#" in color_value:
+        color_value = color_value.lstrip('#')
+    color_value = int(color_value, 16)
+    color_value = ((color_value & 0x000000FF) << 16) | (color_value & 0x0000FF00) | ((color_value & 0x00FF0000) >> 16)
+    
+    hwnd = int(window.winId())
+    color = wintypes.DWORD(color_value)
+    hr = ctypes.windll.dwmapi.DwmSetWindowAttribute(
+        hwnd,
+        DWMWA_CAPTION_COLOR,
+        ctypes.byref(color),
+        ctypes.sizeof(color)
+    )
+    if hr != 0:
+        print("Failed to set caption color. HRESULT:", hr)
+    #return hr
+
+
+
 app = QApplication(sys.argv)
 window = ClockWindow()
 window.show()
+set_caption_color(window, "3c3c3c")  # Red title bar
+
 sys.exit(app.exec())
