@@ -4,7 +4,7 @@ from ctypes import wintypes
 from PyQt6.QtWidgets import QMainWindow, QApplication, QStyle, QGraphicsDropShadowEffect
 from PyQt6.uic import loadUi
 from PyQt6.QtCore import QTimer, Qt, QPoint, QSize, QPropertyAnimation, QEasingCurve
-from PyQt6 import QtGui
+from PyQt6 import QtGui, QtWidgets, QtCore
 from time import strftime, localtime
 import uuid
 
@@ -66,7 +66,101 @@ class ClockWindow(QMainWindow):
         self.timer.timeout.connect(self.update_time)
         self.timer.start()
         self.update_time()  # initial update
-    
+        
+        checkbox = QtWidgets.QCheckBox()
+        checkbox.setText("Check me")
+
+        model = QtGui.QStandardItemModel()
+        items = ["Item 1", "Item 2", "Item 3", "Item 4"]
+        for text in items:
+            item = QtGui.QStandardItem(text)
+            item.setFlags(QtCore.Qt.ItemFlag.ItemIsEnabled | QtCore.Qt.ItemFlag.ItemIsUserCheckable)
+            item.setData(QtCore.Qt.CheckState.Unchecked, QtCore.Qt.ItemDataRole.CheckStateRole)
+            model.appendRow(item)
+
+        
+
+        dropdownBtn = QtWidgets.QComboBox()
+        dropdownBtn.setPlaceholderText("Select an item")
+        
+        dropdownBtn.setModel(model)
+
+        self.smallButton = QtWidgets.QPushButton()
+        self.smallButton.setText("Small Button")
+        self.smallButton.setFixedSize(40, 30)
+        self.smallButton.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.smallButton.clicked.connect(self.smallButtonClicked)
+        self.smallButton.setStyleSheet("""
+            QPushButton {
+                background-color: dodgerblue;
+                color: white;
+                border: none;
+                border-radius: 25px;  /* Adjust based on your button size */
+                padding: 20px 28px;
+                font-size: 24px;
+            }
+            QPushButton:pressed {
+                background-color: #1C86EE;  /* A slightly darker shade to simulate 75% brightness */
+            }
+        """)
+        self.smallButton.setCheckable(True)
+
+
+        self.horizontalLayout_2.addWidget(dropdownBtn)
+        self.horizontalLayout_2.addWidget(self.smallButton)
+        self.titleBar.setMinimumHeight(50)
+        self.titleBar.setMaximumHeight(50)
+
+    # def create_checkable_combobox(items):
+    #     combo = QtWidgets.QComboBox()
+    #     model = QtGui.QStandardItemModel()
+
+    #     for text in items:
+    #         item = QtGui.QStandardItem(text)
+    #         item.setFlags(QtCore.Qt.ItemFlag.ItemIsEnabled | QtCore.Qt.ItemFlag.ItemIsUserCheckable)
+    #         item.setData(QtCore.Qt.CheckState.Unchecked, QtCore.Qt.ItemDataRole.CheckStateRole)
+    #         model.appendRow(item)
+
+    #     combo.setModel(model)
+    #     return combo
+
+    def smallButtonClicked(self):
+        if self.smallButton.isChecked():
+            #create an overlay that sticks to the right side of the window
+            overlay = QtWidgets.QWidget()
+            overlay.setFixedSize(200, 200)
+            overlay.setStyleSheet("background-color: rgba(80, 80, 80, 230);")
+            
+            # Get the position of the button inside of main window
+            pos = self.smallButton.mapTo(self, QPoint(0, 0))
+
+            overlay.move(self.width() - overlay.width(), self.titleBar.height())
+            print(f"pos: {pos.x()}, {pos.y()}\nOther Pos: {self.width() - overlay.width()}")
+            # overlay.move(self.width() - overlay.width(), 100)
+            # Store the overlay as an instance variable
+            self.overlay = overlay
+            # Make the overlay a child of the main window
+            self.overlay.setParent(self)
+            # Show the overlay
+            self.overlay.show()
+            # Bring the overlay to the front
+            self.overlay.raise_()
+        else:
+            print("unchecked")
+            # Hide the overlay
+            self.overlay.hide()
+            # Delete the overlay
+            #self.overlay.deleteLater()
+        
+    def resizeEvent(self, event):
+        #if window is resized, move the overlay to the right side of the window
+        if hasattr(self, 'overlay'):
+            pos = self.smallButton.mapTo(self, QPoint(0, 0))
+            self.overlay.move(self.width() - self.overlay.width(), self.titleBar.height())
+            # Bring the overlay to the front
+            self.overlay.raise_()
+        #super().resizeEvent(event)
+
     def animateClose(self):
         # Animate opacity from 1.0 to 0.0, then minimize.
         self.anim = QPropertyAnimation(self, b"windowOpacity")
